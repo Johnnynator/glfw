@@ -145,7 +145,7 @@ _GLFWmonitor** _glfwPlatformGetMonitors(int* count)
         if (adapter.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE)
             primaryIndex = found;
 
-        name = _glfwCreateUTF8FromWideString(display.DeviceString);
+        name = _glfwCreateUTF8FromWideString(display.DeviceName);
         if (!name)
         {
             _glfwDestroyMonitors(monitors, found);

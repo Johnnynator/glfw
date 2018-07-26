@@ -45,14 +45,33 @@ static void updateClipRect(_GLFWwindow* window)
     ClipCursor(&clipRect);
 }
 
+// Capture mouse cursor
+//
+static void captureCursor(_GLFWwindow* window)
+{
+	if (!window->win32.cursorCaptured)
+	{
+		//SetCapture(window->win32.handle);
+		updateClipRect(window);
+		window->win32.cursorCaptured = GL_TRUE;
+	}
+}
+
+static void releaseCursor(_GLFWwindow* window)
+{
+	if (window->win32.cursorCaptured)
+	{
+		//ReleaseCapture();
+		ClipCursor(NULL);
+		window->win32.cursorCaptured = GL_FALSE;
+	}
+}
+
 // Hide mouse cursor
 //
 static void hideCursor(_GLFWwindow* window)
 {
     POINT pos;
-
-    ReleaseCapture();
-    ClipCursor(NULL);
 
     if (window->win32.cursorHidden)
     {
@@ -67,28 +86,11 @@ static void hideCursor(_GLFWwindow* window)
     }
 }
 
-// Capture mouse cursor
-//
-static void captureCursor(_GLFWwindow* window)
-{
-    if (!window->win32.cursorHidden)
-    {
-        ShowCursor(FALSE);
-        window->win32.cursorHidden = GL_TRUE;
-    }
-
-    updateClipRect(window);
-    SetCapture(window->win32.handle);
-}
-
 // Show mouse cursor
 //
 static void showCursor(_GLFWwindow* window)
 {
     POINT pos;
-
-    ReleaseCapture();
-    ClipCursor(NULL);
 
     if (window->win32.cursorHidden)
     {
@@ -100,6 +102,15 @@ static void showCursor(_GLFWwindow* window)
     {
         if (WindowFromPoint(pos) == window->win32.handle)
             SetCursor(LoadCursor(NULL, IDC_ARROW));
+    }
+}
+
+static void disableCursor(_GLFWwindow* window)
+{
+    if (!window->win32.cursorHidden)
+    {
+        ShowCursor(FALSE);
+        window->win32.cursorHidden = GL_TRUE;
     }
 }
 
@@ -363,6 +374,26 @@ static int translateKey(WPARAM wParam, LPARAM lParam)
     return GLFW_KEY_UNKNOWN;
 }
 
+int _glfwPlatformGetCharForKey(int key) {
+	if(key < 0 || key >= 256)
+		return -1;
+	if(key >= 'a' && key <= 'z')
+		key += 'A'-'a';
+	else if(key == '`')
+		key = '~';
+	return key;
+}
+
+int _glfwPlatformGetKeyForChar(int chr) {
+	if(chr < 0 || chr >= 256)
+		return -1;
+	if(chr >= 'a' && chr <= 'z')
+		chr += 'A'-'a';
+	else if(chr == '~')
+		chr = '`';
+	return chr;
+}
+
 // Window callback function (handles window events)
 //
 static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
@@ -397,7 +428,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             if (!focused && _glfw.focusedWindow == window)
             {
                 // The window was defocused (or iconified, see above)
-
+				if (window->cursorCaptured)
+					releaseCursor(window);
                 if (window->cursorMode != GLFW_CURSOR_NORMAL)
                     showCursor(window);
 
@@ -416,10 +448,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             else if (focused && _glfw.focusedWindow != window)
             {
                 // The window was focused
-
-                if (window->cursorMode == GLFW_CURSOR_DISABLED)
-                    captureCursor(window);
-                else if (window->cursorMode == GLFW_CURSOR_HIDDEN)
+                if (window->cursorMode == GLFW_CURSOR_HIDDEN)
                     hideCursor(window);
 
                 if (window->monitor)
@@ -536,23 +565,28 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         {
             const int mods = getKeyMods();
 
-            SetCapture(hWnd);
+			if(window->win32.cursorInside) {
+				if(window->cursorCaptured && !window->win32.cursorCaptured)
+					captureCursor(window);
 
-            if (uMsg == WM_LBUTTONDOWN)
-                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, mods);
-            else if (uMsg == WM_RBUTTONDOWN)
-                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS, mods);
-            else if (uMsg == WM_MBUTTONDOWN)
-                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_MIDDLE, GLFW_PRESS, mods);
-            else
-            {
-                if (HIWORD(wParam) == XBUTTON1)
-                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_4, GLFW_PRESS, mods);
-                else if (HIWORD(wParam) == XBUTTON2)
-                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_5, GLFW_PRESS, mods);
+				SetCapture(hWnd);
 
-                return TRUE;
-            }
+				if (uMsg == WM_LBUTTONDOWN)
+					_glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, mods);
+				else if (uMsg == WM_RBUTTONDOWN)
+					_glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS, mods);
+				else if (uMsg == WM_MBUTTONDOWN)
+					_glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_MIDDLE, GLFW_PRESS, mods);
+				else
+				{
+					if (HIWORD(wParam) == XBUTTON1)
+						_glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_4, GLFW_PRESS, mods);
+					else if (HIWORD(wParam) == XBUTTON2)
+						_glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_5, GLFW_PRESS, mods);
+
+					return TRUE;
+				}
+			}
 
             return 0;
         }
@@ -616,18 +650,18 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
                 _glfwInputCursorMotion(window, x, y);
             }
 
-            if (!window->win32.cursorInside)
-            {
-                TRACKMOUSEEVENT tme;
-                ZeroMemory(&tme, sizeof(tme));
-                tme.cbSize = sizeof(tme);
-                tme.dwFlags = TME_LEAVE;
-                tme.hwndTrack = window->win32.handle;
-                TrackMouseEvent(&tme);
+			if (!window->win32.cursorInside)
+			{
+				TRACKMOUSEEVENT tme;
+				ZeroMemory(&tme, sizeof(tme));
+				tme.cbSize = sizeof(tme);
+				tme.dwFlags = TME_LEAVE;
+				tme.hwndTrack = window->win32.handle;
+				TrackMouseEvent(&tme);
 
-                window->win32.cursorInside = GL_TRUE;
-                _glfwInputCursorEnter(window, GL_TRUE);
-            }
+				window->win32.cursorInside = GL_TRUE;
+				_glfwInputCursorEnter(window, GL_TRUE);
+			}
 
             return 0;
         }
@@ -654,8 +688,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
         case WM_SIZE:
         {
-            if (window->cursorMode == GLFW_CURSOR_DISABLED)
-                updateClipRect(window);
+            if (window->cursorCaptured)
+                releaseCursor(window);
 
             _glfwInputFramebufferSize(window, LOWORD(lParam), HIWORD(lParam));
             _glfwInputWindowSize(window, LOWORD(lParam), HIWORD(lParam));
@@ -664,8 +698,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
         case WM_MOVE:
         {
-            if (window->cursorMode == GLFW_CURSOR_DISABLED)
-                updateClipRect(window);
+            if (window->cursorCaptured)
+                releaseCursor(window);
 
             _glfwInputWindowPos(window, LOWORD(lParam), HIWORD(lParam));
             return 0;
@@ -1032,6 +1066,11 @@ void _glfwPlatformHideWindow(_GLFWwindow* window)
     ShowWindow(window->win32.handle, SW_HIDE);
 }
 
+void _glfwPlatformFlashWindow(_GLFWwindow* window)
+{
+	FlashWindow(window->win32.handle, TRUE);
+}
+
 void _glfwPlatformPollEvents(void)
 {
     MSG msg;
@@ -1119,8 +1158,16 @@ void _glfwPlatformSetCursorMode(_GLFWwindow* window, int mode)
             hideCursor(window);
             break;
         case GLFW_CURSOR_DISABLED:
-            captureCursor(window);
+            disableCursor(window);
             break;
+		case GLFW_CURSOR_FREE:
+			releaseCursor(window);
+			break;
+		case GLFW_CURSOR_CAPTURED:
+			window->cursorCaptured = GL_TRUE;
+			if(_glfw.focusedWindow == window && window->win32.cursorInside)
+				captureCursor(window);
+			break;
     }
 }
 

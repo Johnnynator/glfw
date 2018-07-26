@@ -178,6 +178,9 @@ int _glfwCreateContext(_GLFWwindow* window,
         ADD_ATTR2(NSOpenGLPFASamples, fbconfig->samples);
     }
 
+	ADD_ATTR(NSOpenGLPFANoRecovery);
+	ADD_ATTR(NSOpenGLPFAAccelerated);
+
     // NOTE: All NSOpenGLPixelFormats on the relevant cards support sRGB
     // frambuffer, so there's no need (and no way) to request it
 

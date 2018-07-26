@@ -258,36 +258,7 @@ if (_GLFW_GLX)
     include(CheckFunctionExists)
 
     set(CMAKE_REQUIRED_LIBRARIES ${OPENGL_gl_LIBRARY})
-    check_function_exists(glXGetProcAddress _GLFW_HAS_GLXGETPROCADDRESS)
-    check_function_exists(glXGetProcAddressARB _GLFW_HAS_GLXGETPROCADDRESSARB)
-    check_function_exists(glXGetProcAddressEXT _GLFW_HAS_GLXGETPROCADDRESSEXT)
-
-    if (NOT _GLFW_HAS_GLXGETPROCADDRESS AND
-        NOT _GLFW_HAS_GLXGETPROCADDRESSARB AND
-        NOT _GLFW_HAS_GLXGETPROCADDRESSEXT)
-        message(WARNING "No glXGetProcAddressXXX variant found")
-
-        # Check for dlopen support as a fallback
-
-        find_library(DL_LIBRARY dl)
-        mark_as_advanced(DL_LIBRARY)
-        if (DL_LIBRARY)
-            set(CMAKE_REQUIRED_LIBRARIES ${DL_LIBRARY})
-        else()
-            set(CMAKE_REQUIRED_LIBRARIES "")
-        endif()
-
-        check_function_exists(dlopen _GLFW_HAS_DLOPEN)
-
-        if (NOT _GLFW_HAS_DLOPEN)
-            message(FATAL_ERROR "No entry point retrieval mechanism found")
-        endif()
-
-        if (DL_LIBRARY)
-            list(APPEND glfw_LIBRARIES ${DL_LIBRARY})
-            set(GLFW_PKG_LIBS "${GLFW_PKG_LIBS} -ldl")
-        endif()
-    endif()
+	set(_GLFW_HAS_GLXGETPROCADDRESS 1)
 
 endif()
 
