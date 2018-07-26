@@ -298,15 +298,6 @@ static GLboolean createWindow(_GLFWwindow* window,
 //
 static void hideCursor(_GLFWwindow* window)
 {
-    // Un-grab cursor (in windowed mode only; in fullscreen mode we still
-    // want the cursor grabbed in order to confine the cursor to the window
-    // area)
-    if (window->x11.cursorGrabbed && window->monitor == NULL)
-    {
-        XUngrabPointer(_glfw.x11.display, CurrentTime);
-        window->x11.cursorGrabbed = GL_FALSE;
-    }
-
     if (!window->x11.cursorHidden)
     {
         XDefineCursor(_glfw.x11.display, window->x11.handle, _glfw.x11.cursor);
@@ -314,44 +305,45 @@ static void hideCursor(_GLFWwindow* window)
     }
 }
 
-// Capture cursor
-//
-static void captureCursor(_GLFWwindow* window)
-{
-    hideCursor(window);
-
-    if (!window->x11.cursorGrabbed)
-    {
-        if (XGrabPointer(_glfw.x11.display, window->x11.handle, True,
-                         ButtonPressMask | ButtonReleaseMask |
-                         PointerMotionMask, GrabModeAsync, GrabModeAsync,
-                         window->x11.handle, None, CurrentTime) ==
-            GrabSuccess)
-        {
-            window->x11.cursorGrabbed = GL_TRUE;
-        }
-    }
-}
-
 // Show cursor
 //
 static void showCursor(_GLFWwindow* window)
 {
-    // Un-grab cursor (in windowed mode only; in fullscreen mode we still
-    // want the cursor grabbed in order to confine the cursor to the window
-    // area)
-    if (window->x11.cursorGrabbed && window->monitor == NULL)
-    {
-        XUngrabPointer(_glfw.x11.display, CurrentTime);
-        window->x11.cursorGrabbed = GL_FALSE;
-    }
-
     // Show cursor
     if (window->x11.cursorHidden)
     {
         XUndefineCursor(_glfw.x11.display, window->x11.handle);
         window->x11.cursorHidden = GL_FALSE;
     }
+}
+
+// Capture cursor
+//
+static void captureCursor(_GLFWwindow* window)
+{
+	if (!window->x11.cursorGrabbed)
+	{
+		if (XGrabPointer(_glfw.x11.display, window->x11.handle, True,
+						 ButtonPressMask | ButtonReleaseMask |
+						 PointerMotionMask, GrabModeAsync, GrabModeAsync,
+						 window->x11.handle, None, CurrentTime) ==
+			GrabSuccess)
+		{
+			window->x11.cursorGrabbed = GL_TRUE;
+		}
+	}
+}
+
+// Capture cursor
+//
+static void releaseCursor(_GLFWwindow* window)
+{
+	// Un-grab cursor
+	if (window->x11.cursorGrabbed)
+	{
+		XUngrabPointer(_glfw.x11.display, CurrentTime);
+		window->x11.cursorGrabbed = GL_FALSE;
+	}
 }
 
 // Enter fullscreen mode
@@ -515,7 +507,8 @@ static void processEvent(XEvent *event)
             const int mods = translateState(event->xkey.state);
             const int character = translateChar(&event->xkey);
 
-            _glfwInputKey(window, key, event->xkey.keycode, GLFW_PRESS, mods);
+			if (key != GLFW_KEY_UNKNOWN)
+				_glfwInputKey(window, key, event->xkey.keycode, GLFW_PRESS, mods);
 
             if (character != -1)
                 _glfwInputChar(window, character);
@@ -528,7 +521,8 @@ static void processEvent(XEvent *event)
             const int key = translateKey(event->xkey.keycode);
             const int mods = translateState(event->xkey.state);
 
-            _glfwInputKey(window, key, event->xkey.keycode, GLFW_RELEASE, mods);
+            if (key != GLFW_KEY_UNKNOWN)
+				_glfwInputKey(window, key, event->xkey.keycode, GLFW_RELEASE, mods);
             break;
         }
 
@@ -708,8 +702,10 @@ static void processEvent(XEvent *event)
         {
             _glfwInputWindowFocus(window, GL_TRUE);
 
-            if (window->cursorMode == GLFW_CURSOR_DISABLED)
+            if (window->cursorCaptured)
                 captureCursor(window);
+			if (window->cursorMode != GLFW_CURSOR_NORMAL)
+				hideCursor(window);
 
             break;
         }
@@ -718,7 +714,9 @@ static void processEvent(XEvent *event)
         {
             _glfwInputWindowFocus(window, GL_FALSE);
 
-            if (window->cursorMode == GLFW_CURSOR_DISABLED)
+			if (window->cursorCaptured)
+				releaseCursor(window);
+            if (window->cursorMode == GLFW_CURSOR_NORMAL)
                 showCursor(window);
 
             break;
@@ -1093,6 +1091,11 @@ void _glfwPlatformHideWindow(_GLFWwindow* window)
     XFlush(_glfw.x11.display);
 }
 
+void _glfwPlatformFlashWindow(_GLFWwindow* window)
+{
+	//TODO: Implement if possible
+}
+
 void _glfwPlatformPollEvents(void)
 {
     int count = XPending(_glfw.x11.display);
@@ -1155,11 +1158,35 @@ void _glfwPlatformSetCursorMode(_GLFWwindow* window, int mode)
             hideCursor(window);
             break;
         case GLFW_CURSOR_DISABLED:
-            captureCursor(window);
+            hideCursor(window);
             break;
+		case GLFW_CURSOR_FREE:
+			releaseCursor(window);
+			break;
+		case GLFW_CURSOR_CAPTURED:
+			captureCursor(window);
+			break;
     }
 }
 
+int _glfwPlatformGetCharForKey(int key) {
+	if(key < 0 || key >= 256)
+		return -1;
+	if(key >= 'a' && key <= 'z')
+		key -= 'a'-'A';
+	int chr = _glfw.x11.keyCharLUT[key];
+	if(chr >= 'A' && chr <= 'Z')
+		chr -= 'A'-'a';
+	return chr;
+}
+
+int _glfwPlatformGetKeyForChar(int chr) {
+	if(chr < 0 || chr >= 256)
+		return -1;
+	if(chr >= 'A' && chr <= 'Z')
+		chr -= 'A'-'a';
+	return _glfw.x11.keyCharReverseLUT[chr];
+}
 
 //////////////////////////////////////////////////////////////////////////
 //////                        GLFW native API                       //////

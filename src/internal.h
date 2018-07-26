@@ -208,6 +208,7 @@ struct _GLFWwindow
     GLboolean           stickyMouseButtons;
     double              cursorPosX, cursorPosY;
     int                 cursorMode;
+	GLboolean			cursorCaptured;
     char                mouseButton[GLFW_MOUSE_BUTTON_LAST + 1];
     char                key[GLFW_KEY_LAST + 1];
 
@@ -509,6 +510,8 @@ void _glfwPlatformShowWindow(_GLFWwindow* window);
  */
 void _glfwPlatformHideWindow(_GLFWwindow* window);
 
+void _glfwPlatformFlashWindow(_GLFWwindow* window);
+
 /*! @copydoc glfwPollEvents
  *  @ingroup platform
  */
@@ -547,6 +550,10 @@ int _glfwPlatformExtensionSupported(const char* extension);
  *  @ingroup platform
  */
 GLFWglproc _glfwPlatformGetProcAddress(const char* procname);
+
+int _glfwPlatformGetCharForKey(int key);
+
+int _glfwPlatformGetKeyForChar(int chr);
 
 
 //========================================================================

@@ -172,6 +172,12 @@ typedef struct _GLFWlibraryX11
     // LUT for mapping X11 key codes to GLFW key codes
     int             keyCodeLUT[256];
 
+	// LUT for mapping GLFW key codes to characters
+	int             keyCharLUT[256];
+
+	// LUT for mapping characters to GLFW key codes
+	int             keyCharReverseLUT[256];
+
     struct {
         int         count;
         int         timeout;

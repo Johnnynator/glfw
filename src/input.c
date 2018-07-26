@@ -36,43 +36,55 @@
 static void setCursorMode(_GLFWwindow* window, int newMode)
 {
     int oldMode;
+	GLboolean doCapture;
 
     if (newMode != GLFW_CURSOR_NORMAL &&
         newMode != GLFW_CURSOR_HIDDEN &&
-        newMode != GLFW_CURSOR_DISABLED)
+        newMode != GLFW_CURSOR_DISABLED &&
+		newMode != GLFW_CURSOR_FREE &&
+		newMode != GLFW_CURSOR_CAPTURED)
     {
         _glfwInputError(GLFW_INVALID_ENUM, NULL);
         return;
     }
 
-    oldMode = window->cursorMode;
-    if (oldMode == newMode)
-        return;
+	if (newMode != GLFW_CURSOR_FREE && newMode != GLFW_CURSOR_CAPTURED) {
+		oldMode = window->cursorMode;
+		if (oldMode != newMode) {
+			if (window == _glfw.focusedWindow)
+			{
+				if (oldMode == GLFW_CURSOR_DISABLED)
+				{
+					window->cursorPosX = _glfw.cursorPosX;
+					window->cursorPosY = _glfw.cursorPosY;
 
-    if (window == _glfw.focusedWindow)
-    {
-        if (oldMode == GLFW_CURSOR_DISABLED)
-        {
-            window->cursorPosX = _glfw.cursorPosX;
-            window->cursorPosY = _glfw.cursorPosY;
+					_glfwPlatformSetCursorPos(window, _glfw.cursorPosX, _glfw.cursorPosY);
+				}
+				else if (newMode == GLFW_CURSOR_DISABLED)
+				{
+					int width, height;
 
-            _glfwPlatformSetCursorPos(window, _glfw.cursorPosX, _glfw.cursorPosY);
-        }
-        else if (newMode == GLFW_CURSOR_DISABLED)
-        {
-            int width, height;
+					_glfw.cursorPosX = window->cursorPosX;
+					_glfw.cursorPosY = window->cursorPosY;
 
-            _glfw.cursorPosX = window->cursorPosX;
-            _glfw.cursorPosY = window->cursorPosY;
+					_glfwPlatformGetWindowSize(window, &width, &height);
+					_glfwPlatformSetCursorPos(window, width / 2.0, height / 2.0);
+				}
 
-            _glfwPlatformGetWindowSize(window, &width, &height);
-            _glfwPlatformSetCursorPos(window, width / 2.0, height / 2.0);
-        }
+				_glfwPlatformSetCursorMode(window, newMode);
+			}
 
-        _glfwPlatformSetCursorMode(window, newMode);
-    }
+			window->cursorMode = newMode;
+		}
+	}
+	else {
+		doCapture = newMode == GLFW_CURSOR_CAPTURED;
 
-    window->cursorMode = newMode;
+		if (doCapture != window->cursorCaptured) {
+			_glfwPlatformSetCursorMode(window, newMode);
+			window->cursorCaptured = doCapture;
+		}
+	}
 }
 
 // Set sticky keys mode for the specified window

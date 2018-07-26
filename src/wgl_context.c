@@ -31,6 +31,8 @@
 #include <malloc.h>
 #include <assert.h>
 
+#define _GLFW_USE_DWM_SWAP_INTERVAL
+
 
 // Initialize WGL-specific extensions
 // This function is called once before initial context creation, i.e. before

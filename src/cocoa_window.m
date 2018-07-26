@@ -127,8 +127,6 @@ static void centerCursor(_GLFWwindow *window)
     _glfwInputWindowSize(window, contentRect.size.width, contentRect.size.height);
     _glfwInputWindowDamage(window);
 
-    if (window->cursorMode == GLFW_CURSOR_DISABLED)
-        centerCursor(window);
 }
 
 - (void)windowDidMove:(NSNotification *)notification
@@ -139,8 +137,6 @@ static void centerCursor(_GLFWwindow *window)
     _glfwPlatformGetWindowPos(window, &x, &y);
     _glfwInputWindowPos(window, x, y);
 
-    if (window->cursorMode == GLFW_CURSOR_DISABLED)
-        centerCursor(window);
 }
 
 - (void)windowDidMiniaturize:(NSNotification *)notification
@@ -160,8 +156,6 @@ static void centerCursor(_GLFWwindow *window)
 {
     _glfwInputWindowFocus(window, GL_TRUE);
 
-    if (window->cursorMode == GLFW_CURSOR_DISABLED)
-        centerCursor(window);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
@@ -377,6 +371,26 @@ static int translateKey(unsigned int key)
         return GLFW_KEY_UNKNOWN;
 
     return table[key];
+}
+
+int _glfwPlatformGetCharForKey(int key) {
+    if(key < 0 || key >= 256)
+        return -1;
+    if(key >= 'a' && key <= 'z')
+        key += 'A'-'a';
+    else if(key == '`')
+        key = '~';
+    return key;
+}
+
+int _glfwPlatformGetKeyForChar(int chr) {
+    if(chr < 0 || chr >= 256)
+        return -1;
+    if(chr >= 'a' && chr <= 'z')
+        chr += 'A'-'a';
+    else if(chr == '~')
+        chr = '`';
+    return chr;
 }
 
 
@@ -1006,6 +1020,11 @@ void _glfwPlatformHideWindow(_GLFWwindow* window)
     _glfwInputWindowVisibility(window, GL_FALSE);
 }
 
+void _glfwPlatformFlashWindow(_GLFWwindow* window)
+{
+	//TODO: Implement if possible
+}
+
 void _glfwPlatformPollEvents(void)
 {
     for (;;)
@@ -1048,7 +1067,7 @@ void _glfwPlatformSetCursorPos(_GLFWwindow* window, double x, double y)
     else
     {
         const NSRect contentRect = [window->ns.view frame];
-        const NSPoint localPoint = NSMakePoint(x, contentRect.size.height - y - 1);
+        const NSPoint localPoint = NSMakePoint(x, contentRect.size.height - y);
         const NSPoint globalPoint = [window->ns.object convertBaseToScreen:localPoint];
 
         CGWarpMouseCursorPosition(CGPointMake(globalPoint.x,
@@ -1058,37 +1077,32 @@ void _glfwPlatformSetCursorPos(_GLFWwindow* window, double x, double y)
 
 void _glfwPlatformSetCursorMode(_GLFWwindow* window, int mode)
 {
-    if (mode == GLFW_CURSOR_HIDDEN)
+    if (mode == GLFW_CURSOR_CAPTURED)
     {
         [window->ns.object enableCursorRects];
         [window->ns.object invalidateCursorRectsForView:window->ns.view];
     }
-    else
+    else if(mode == GLFW_CURSOR_FREE)
     {
         [window->ns.object disableCursorRects];
         [window->ns.object invalidateCursorRectsForView:window->ns.view];
     }
-
-    if (mode == GLFW_CURSOR_DISABLED)
-    {
-        CGAssociateMouseAndMouseCursorPosition(false);
-
+	else if(mode == GLFW_CURSOR_HIDDEN)
+	{
         if (!_glfw.ns.cursorHidden)
         {
             [NSCursor hide];
             _glfw.ns.cursorHidden = GL_TRUE;
         }
-    }
-    else
-    {
-        CGAssociateMouseAndMouseCursorPosition(true);
-
+	}
+	else if(mode == GLFW_CURSOR_NORMAL)
+	{
         if (_glfw.ns.cursorHidden)
         {
             [NSCursor unhide];
             _glfw.ns.cursorHidden = GL_FALSE;
         }
-    }
+	}
 }
 
 

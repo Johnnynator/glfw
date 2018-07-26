@@ -156,32 +156,32 @@ static int translateKey(int keyCode)
         // extension is available). This will give a layout dependent mapping
         // (which is wrong, and we may miss some keys, especially on non-US
         // keyboards), but it's better than nothing...
-        case XK_a:              return GLFW_KEY_A;
-        case XK_b:              return GLFW_KEY_B;
-        case XK_c:              return GLFW_KEY_C;
-        case XK_d:              return GLFW_KEY_D;
-        case XK_e:              return GLFW_KEY_E;
-        case XK_f:              return GLFW_KEY_F;
-        case XK_g:              return GLFW_KEY_G;
-        case XK_h:              return GLFW_KEY_H;
-        case XK_i:              return GLFW_KEY_I;
-        case XK_j:              return GLFW_KEY_J;
-        case XK_k:              return GLFW_KEY_K;
-        case XK_l:              return GLFW_KEY_L;
-        case XK_m:              return GLFW_KEY_M;
-        case XK_n:              return GLFW_KEY_N;
-        case XK_o:              return GLFW_KEY_O;
-        case XK_p:              return GLFW_KEY_P;
-        case XK_q:              return GLFW_KEY_Q;
-        case XK_r:              return GLFW_KEY_R;
-        case XK_s:              return GLFW_KEY_S;
-        case XK_t:              return GLFW_KEY_T;
-        case XK_u:              return GLFW_KEY_U;
-        case XK_v:              return GLFW_KEY_V;
-        case XK_w:              return GLFW_KEY_W;
-        case XK_x:              return GLFW_KEY_X;
-        case XK_y:              return GLFW_KEY_Y;
-        case XK_z:              return GLFW_KEY_Z;
+        case XK_a: case XK_A:   return GLFW_KEY_A;
+        case XK_b: case XK_B:   return GLFW_KEY_B;
+        case XK_c: case XK_C:   return GLFW_KEY_C;
+        case XK_d: case XK_D:   return GLFW_KEY_D;
+        case XK_e: case XK_E:   return GLFW_KEY_E;
+        case XK_f: case XK_F:   return GLFW_KEY_F;
+        case XK_g: case XK_G:   return GLFW_KEY_G;
+        case XK_h: case XK_H:   return GLFW_KEY_H;
+        case XK_i: case XK_I:   return GLFW_KEY_I;
+        case XK_j: case XK_J:   return GLFW_KEY_J;
+        case XK_k: case XK_K:   return GLFW_KEY_K;
+        case XK_l: case XK_L:   return GLFW_KEY_L;
+        case XK_m: case XK_M:   return GLFW_KEY_M;
+        case XK_n: case XK_N:   return GLFW_KEY_N;
+        case XK_o: case XK_O:   return GLFW_KEY_O;
+        case XK_p: case XK_P:   return GLFW_KEY_P;
+        case XK_q: case XK_Q:   return GLFW_KEY_Q;
+        case XK_r: case XK_R:   return GLFW_KEY_R;
+        case XK_s: case XK_S:   return GLFW_KEY_S;
+        case XK_t: case XK_T:   return GLFW_KEY_T;
+        case XK_u: case XK_U:   return GLFW_KEY_U;
+        case XK_v: case XK_V:   return GLFW_KEY_V;
+        case XK_w: case XK_W:   return GLFW_KEY_W;
+        case XK_x: case XK_X:   return GLFW_KEY_X;
+        case XK_y: case XK_Y:   return GLFW_KEY_Y;
+        case XK_z: case XK_Z:   return GLFW_KEY_Z;
         case XK_1:              return GLFW_KEY_1;
         case XK_2:              return GLFW_KEY_2;
         case XK_3:              return GLFW_KEY_3;
@@ -221,8 +221,11 @@ static void updateKeyCodeLUT(void)
     XkbDescPtr descr;
 
     // Clear the LUT
-    for (keyCode = 0;  keyCode < 256;  keyCode++)
+    for (keyCode = 0;  keyCode < 256;  keyCode++) {
         _glfw.x11.keyCodeLUT[keyCode] = GLFW_KEY_UNKNOWN;
+		_glfw.x11.keyCharLUT[keyCode] = -1;
+		_glfw.x11.keyCharReverseLUT[keyCode] = -1;
+	}
 
     // Use XKB to determine physical key locations independently of the current
     // keyboard layout
@@ -310,6 +313,28 @@ static void updateKeyCodeLUT(void)
         if (_glfw.x11.keyCodeLUT[keyCode] < 0)
             _glfw.x11.keyCodeLUT[keyCode] = translateKey(keyCode);
     }
+
+	// Create the character lookup table
+	for (keyCode = 0;  keyCode < 256;  keyCode++)
+	{
+		int glfw_code = _glfw.x11.keyCodeLUT[keyCode];
+		if (_glfw.x11.keyCharLUT[glfw_code] != -1)
+			continue;
+
+		KeySym keysym = XKeycodeToKeysym(_glfw.x11.display, keyCode, 0);
+		_glfw.x11.keyCharLUT[glfw_code] = (int) _glfwKeySym2Unicode(keysym);
+	}
+
+
+	// Create the character reverse lookup table for low characters
+	for (keyCode = 0;  keyCode < 256;  keyCode++)
+	{
+		int chr = _glfw.x11.keyCharLUT[keyCode];
+		if (_glfw.x11.keyCharReverseLUT[chr] != -1)
+			continue;
+
+		_glfw.x11.keyCharReverseLUT[chr] = keyCode;
+	}
 }
 
 // Check whether the specified atom is supported

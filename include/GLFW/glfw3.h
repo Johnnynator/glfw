@@ -540,6 +540,8 @@ extern "C" {
 #define GLFW_CURSOR_NORMAL          0x00034001
 #define GLFW_CURSOR_HIDDEN          0x00034002
 #define GLFW_CURSOR_DISABLED        0x00034003
+#define GLFW_CURSOR_FREE			0x00034004
+#define GLFW_CURSOR_CAPTURED		0x00034005
 
 #define GLFW_CONNECTED              0x00040001
 #define GLFW_DISCONNECTED           0x00040002
@@ -1489,6 +1491,8 @@ GLFWAPI void glfwShowWindow(GLFWwindow* window);
  */
 GLFWAPI void glfwHideWindow(GLFWwindow* window);
 
+GLFWAPI void glfwFlashWindow(GLFWwindow* window);
+
 /*! @brief Returns the monitor that the window uses for full screen mode.
  *
  *  This function returns the handle of the monitor that the specified window is
@@ -2253,6 +2257,11 @@ GLFWAPI int glfwExtensionSupported(const char* extension);
  *  @ingroup context
  */
 GLFWAPI GLFWglproc glfwGetProcAddress(const char* procname);
+
+
+//Keysym translation
+GLFWAPI int glfwGetCharForKey(int key);
+GLFWAPI int glfwGetKeyForChar(int chr);
 
 
 /*************************************************************************

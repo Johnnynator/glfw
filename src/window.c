@@ -536,6 +536,18 @@ GLFWAPI void glfwHideWindow(GLFWwindow* handle)
     _glfwPlatformHideWindow(window);
 }
 
+GLFWAPI void glfwFlashWindow(GLFWwindow* handle)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+
+    _GLFW_REQUIRE_INIT();
+
+    if (window->monitor)
+        return;
+
+    _glfwPlatformFlashWindow(window);
+}
+
 GLFWAPI int glfwGetWindowAttrib(GLFWwindow* handle, int attrib)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
@@ -670,5 +682,17 @@ GLFWAPI void glfwWaitEvents(void)
 {
     _GLFW_REQUIRE_INIT();
     _glfwPlatformWaitEvents();
+}
+
+GLFWAPI int glfwGetCharForKey(int key)
+{
+	_GLFW_REQUIRE_INIT_OR_RETURN(-1);
+	return _glfwPlatformGetCharForKey(key);
+}
+
+GLFWAPI int glfwGetKeyForChar(int chr)
+{
+	_GLFW_REQUIRE_INIT_OR_RETURN(-1);
+	return _glfwPlatformGetKeyForChar(chr);
 }
 
